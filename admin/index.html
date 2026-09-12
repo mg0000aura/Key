@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PÂNICO — Admin</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b0b10;color:#fff;font-family:Arial,sans-serif}.wrap{max-width:760px;margin:0 auto;padding:24px}.card{background:#15151d;border:1px solid #292936;border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 10px 30px #0005}h1{margin:0 0 6px;font-size:25px}h2{font-size:18px;margin-top:0}p{color:#aaa}label{display:block;color:#bbb;font-size:13px;margin:12px 0 6px}input,select,button{width:100%;border-radius:10px;border:1px solid #33333f;padding:12px;background:#0f0f15;color:#fff;font-size:15px}button{background:#fff;color:#111;border:0;font-weight:700;cursor:pointer;margin-top:12px}button.secondary{background:#292936;color:#fff}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.key{font-size:25px;font-weight:800;letter-spacing:1px;background:#0d0d13;border:1px dashed #555;padding:15px;border-radius:12px;word-break:break-all;text-align:center}.hidden{display:none}.msg{padding:10px;border-radius:10px;margin-top:12px;background:#20202a;color:#ddd}.item{padding:12px 0;border-bottom:1px solid #292936}.item:last-child{border-bottom:0}.small{font-size:12px;color:#999}@media(max-width:600px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>🔐 PÂNICO ADMIN</h1>
+    <p>Gerador de Keys do PÂNICO CHEATS</p>
+    <div id="login">
+      <label>ADMIN_SECRET</label>
+      <input id="secret" type="password" placeholder="Digite a senha do ADMIN_SECRET" autocomplete="current-password">
+      <button onclick="login()">Entrar</button>
+      <div id="loginMsg"></div>
+    </div>
+    <div id="panel" class="hidden">
+      <button class="secondary" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <div id="content" class="hidden">
+    <div class="card">
+      <h2>⚡ Key automática</h2>
+      <p>Gera no formato <b>PANICO-GO396</b>.</p>
+      <div class="row">
+        <div><label>Validade</label><select id="autoDays"><option value="30">30 dias</option><option value="7">7 dias</option><option value="90">90 dias</option><option value="365">1 ano</option><option value="0">Permanente</option></select></div>
+        <div><label>Produto</label><input id="autoProduct" value="PÂNICO CHEATS"></div>
+      </div>
+      <button onclick="createAuto()">GERAR KEY AUTOMÁTICA</button>
+      <div id="autoResult" class="hidden"></div>
+    </div>
+
+    <div class="card">
+      <h2>✏️ Key personalizada</h2>
+      <p>Digite sua própria Key. Ex.: <b>PANICO-MIGUEL01</b></p>
+      <label>Key personalizada</label><input id="customKey" placeholder="PANICO-MINHAKEY">
+      <div class="row">
+        <div><label>Validade</label><select id="customDays"><option value="30">30 dias</option><option value="7">7 dias</option><option value="90">90 dias</option><option value="365">1 ano</option><option value="0">Permanente</option></select></div>
+        <div><label>Produto</label><input id="customProduct" value="PÂNICO CHEATS"></div>
+      </div>
+      <button onclick="createCustom()">CRIAR KEY PERSONALIZADA</button>
+      <div id="customResult" class="hidden"></div>
+    </div>
+
+    <div class="card"><h2>📋 Keys cadastradas</h2><button class="secondary" onclick="loadKeys()">ATUALIZAR LISTA</button><div id="list" class="small" style="margin-top:10px">Carregando...</div></div>
+  </div>
+</div>
+<script>
+let secret=localStorage.getItem('panico_admin_secret')||'';
+const $=id=>document.getElementById(id);
+function setMsg(id,text,show=true){$(id).innerHTML=text;$(id).classList.toggle('hidden',!show)}
+async function api(method='GET',body){
+ const r=await fetch('/api/admin/keys',{method,headers:{'x-admin-secret':secret,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+ let d={};try{d=await r.json()}catch{}
+ if(!r.ok) throw new Error(d.reason||'Erro na requisição'); return d;
+}
+async function login(){
+ secret=$('secret').value.trim(); if(!secret)return setMsg('loginMsg','Digite o ADMIN_SECRET.');
+ try{await api();localStorage.setItem('panico_admin_secret',secret);showPanel();}catch(e){setMsg('loginMsg','❌ '+e.message)}}
+function showPanel(){$('login').classList.add('hidden');$('panel').classList.remove('hidden');$('content').classList.remove('hidden');loadKeys()}
+function logout(){localStorage.removeItem('panico_admin_secret');secret='';location.reload()}
+async function createAuto(){
+ try{const d=await api('POST',{days:Number($('autoDays').value),product:$('autoProduct').value});showResult('autoResult',d.key.key)}catch(e){setMsg('autoResult','❌ '+e.message)}}
+async function createCustom(){
+ const key=$('customKey').value.trim();if(!key)return setMsg('customResult','Digite a Key personalizada.');
+ try{const d=await api('POST',{key,days:Number($('customDays').value),product:$('customProduct').value});showResult('customResult',d.key.key);$('customKey').value=''}catch(e){setMsg('customResult','❌ '+e.message)}}
+function showResult(id,key){$(id).classList.remove('hidden');$(id).innerHTML='<div class="msg">Key criada:</div><div class="key" onclick="copyKey(this)">'+esc(key)+'</div><div class="small" style="text-align:center;margin-top:7px">Toque na Key para copiar</div>'}
+async function copyKey(el){try{await navigator.clipboard.writeText(el.textContent);el.nextElementSibling.textContent='✓ Copiada!'}catch{}}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function loadKeys(){try{const d=await api();$('list').innerHTML=d.keys.length?d.keys.map(k=>'<div class="item"><b>'+esc(k.key)+'</b><br><span class="small">'+esc(k.product)+' · '+(k.expiresAt?new Date(k.expiresAt).toLocaleString('pt-BR'):'Permanente')+' · '+(k.revoked?'REVOGADA':'ATIVA')+'</span></div>').join(''):'Nenhuma Key cadastrada.'}catch(e){$('list').textContent='❌ '+e.message}}
+if(secret){api().then(showPanel).catch(()=>{localStorage.removeItem('panico_admin_secret');secret=''})}
+</script>
+</body>
+</html>
